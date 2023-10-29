@@ -18,10 +18,15 @@ namespace UdemyRabbitMQ.subscriber
 
             var channel = connection.CreateModel();
 
-            //hello-queue isimli kuyruk yok ise oluşturma işlemini yapacaktır.
-            //QueueDeclare() içerisindeki parametreler publisher ve subscriber içerisinde de aynı olmalıdır. uygulama hata verir.
-            channel.QueueDeclare("hello-queue", true, false, false);
 
+            //random olarak bir kuyruk yapısı ver.
+            var randomQueueName = channel.QueueDeclare().QueueName;
+
+
+            //kuyruğun tekrar silinmesi için bind edildi.
+            //geçici kuyruklardır.
+            channel.QueueBind(randomQueueName, "logs-fanout", "", null);
+            
             //Projeye eklenen 2. kısım: projeye mesajları kaç kaç gönderilecek.
             //herbir subscribera kaç mesaj geleceğinin bilgilendirilmesi.
             // 0-> bana herhangi bir boyuttaki mesajı gönderebilirsin demektedir.
@@ -41,8 +46,9 @@ namespace UdemyRabbitMQ.subscriber
             //autoAck parametresi: true verilirse -> subscriber mesajı aldığında direk olarak kuyruktan silecektir.
             //false verilirse -> rabbitmq subsrcibera bir mesaj gönderdiğinde bu mesajı silmez mesaj doğru işlenirse silme işlemi istenir.
             //(Projeye iki özellik ekledik. 1- false parametresi ile okuduğu mesajı hemen silme dedik. ben sana haber vereceğim dedim. sileceğini haber verme kısmı aşağıda.)
-            channel.BasicConsume("hello-queue", false, consumer);
+            channel.BasicConsume(randomQueueName, false, consumer);
 
+            Console.WriteLine("Loglar dinleniyor.");
             //Event üzerinden dinleme:
             //rabbitmq subscribera bir mesaj gönderdiğinde buradaki event fırlıyor
             //lamda ile kullanımı
