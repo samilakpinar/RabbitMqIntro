@@ -1,6 +1,7 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -17,16 +18,7 @@ namespace UdemyRabbitMQ.subscriber
             using var connection = factory.CreateConnection();
 
             var channel = connection.CreateModel();
-
-
-            //random olarak bir kuyruk yapısı ver.
-            var randomQueueName = channel.QueueDeclare().QueueName;
-
-
-            //kuyruğun tekrar silinmesi için bind edildi.
-            //geçici kuyruklardır.
-            channel.QueueBind(randomQueueName, "logs-fanout", "", null);
-            
+                        
             //Projeye eklenen 2. kısım: projeye mesajları kaç kaç gönderilecek.
             //herbir subscribera kaç mesaj geleceğinin bilgilendirilmesi.
             // 0-> bana herhangi bir boyuttaki mesajı gönderebilirsin demektedir.
@@ -43,10 +35,12 @@ namespace UdemyRabbitMQ.subscriber
 
             var consumer = new EventingBasicConsumer(channel);
 
+            var queuName = "direct-queue-Critical";
+
             //autoAck parametresi: true verilirse -> subscriber mesajı aldığında direk olarak kuyruktan silecektir.
             //false verilirse -> rabbitmq subsrcibera bir mesaj gönderdiğinde bu mesajı silmez mesaj doğru işlenirse silme işlemi istenir.
             //(Projeye iki özellik ekledik. 1- false parametresi ile okuduğu mesajı hemen silme dedik. ben sana haber vereceğim dedim. sileceğini haber verme kısmı aşağıda.)
-            channel.BasicConsume(randomQueueName, false, consumer);
+            channel.BasicConsume(queuName, false, consumer);
 
             Console.WriteLine("Loglar dinleniyor.");
             //Event üzerinden dinleme:
@@ -59,9 +53,14 @@ namespace UdemyRabbitMQ.subscriber
 
 
                 //mesajlar çok hızlı işlendiğinden 1.5 saniyelik geçikme verilecektir.
-                Thread.Sleep(1500);
+                //Thread.Sleep(1500);
 
                 Console.WriteLine("gelen mesaj:"+ message);
+
+
+                //mesajı txt dosyasına yazmak:
+                File.AppendAllText("log-critical.txt", message +"\n");
+
 
                 //Burada mesajı silmesi için haber verdik.
                 //bu mesaj işlendikten sonra, iligli mesajı artık silebilirsin.

@@ -8,6 +8,13 @@ namespace UdemyRabbitMQ.publisher
 {
     internal class Program
     {
+        public enum LogNames
+        {
+            Critical=1,
+            Error=2,
+            Warning=3,
+            Info=4
+        }
         static void Main(string[] args)
         {
             //Ilk olarak rabbitMQya bağlanmak için bir connection factory isminde bir class oluşturulması gereklidir.
@@ -22,24 +29,41 @@ namespace UdemyRabbitMQ.publisher
 
             //Fanout Exchange yapısının tanımlanması:
             //durable:fiziksel olarak kaydedilsin. uygualam restart yapıldığında bu exchange kaybolmasın.
-            channel.ExchangeDeclare("logs-fanout",durable:true,type:ExchangeType.Fanout);
+            channel.ExchangeDeclare("logs-direct",durable:true,type:ExchangeType.Direct);
+
+            Enum.GetNames(typeof(LogNames)).ToList().ForEach(x =>
+            {
+                var rootKey = $"root-{x}";
+
+                //Her dönüldüğünde bir kuyruk oluşturulur.
+                var queueName = $"direct-queue-{x}";
+                channel.QueueDeclare(queueName, true, false, false);
+
+                channel.QueueBind(queueName, "logs-direct", rootKey,null);
+            });
+
 
             //NOT:uygulamayı 1 kere ayağa kaldırıldığında 50 kere mesaj gitsin.
             Enumerable.Range(1, 50).ToList().ForEach(x =>
             {
+
+                LogNames log = (LogNames)new Random().Next(1, 5);
+
                 //mesajın oluşturulması:
                 //rabbitMqya mesajları byte dizisi olarak gönderilir bu şekilde istenilen her şey gönderilir. pdf, image vb.
-                string message = $"log {x}";
+                string message = $"log-type: {log}";
 
                 //mesajın byte çevrilmesi:
                 var messageBody = Encoding.UTF8.GetBytes(message);
 
+                var rootKey = $"root-{log}";
+
                 //kuyruğa gönderilmesi:
                 //arada exchange yapısı verildi.
                 //Kuyruk boş bırakıldı.
-                channel.BasicPublish("logs-fanout", "", null, messageBody);
+                channel.BasicPublish("logs-direct", rootKey, null, messageBody);
 
-                Console.WriteLine($"Mesaj gönderilmiştir : {message}");
+                Console.WriteLine($"Log gönderilmiştir : {message}");
             });
                       
 
